@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Genefy</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="window.location='/'">
+                <div class="brand-icon-box">
+                    <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png"
+                         alt="Cow" style="width: 24px; height: 24px;">
+                </div>
+                <span class="brand-text">Genefy<span>.</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/" class="active">Dashboard</a></li>
+                <li><a href="/manual">Manual</a></li>
+                <li><a href="/batch">Lote</a></li>
+                <li><a href="/history">Histórico</a></li>
+                <li><a href="/analytics">Análises</a></li>
+                <li><a href="/import">Dados</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div>
+                <h1>Visão Geral</h1>
+                <p>:: Status do Rebanho em Tempo Real</p>
+            </div>
+            <button class="btn btn-outline" onclick="location.reload()">
+                <i class="ph ph-arrows-clockwise"></i> Atualizar
+            </button>
+        </header>
+
+        <!-- Stats Grid - DINÂMICO -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-value" id="total-females">-</div>
+                    <div class="stat-label">Fêmeas Totais</div>
+                </div>
+                <i class="ph ph-cow" style="font-size: 2rem; color: var(--primary); opacity: 0.5;"></i>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-value" id="total-bulls">-</div>
+                    <div class="stat-label">Touros Catálogo</div>
+                </div>
+                <i class="ph ph-dna" style="font-size: 2rem; color: var(--accent); opacity: 0.5;"></i>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-content">
+                    <div class="stat-value" id="total-matings">-</div>
+                    <div class="stat-label">Acasalamentos</div>
+                </div>
+                <i class="ph ph-list-heart" style="font-size: 2rem; opacity: 0.5;"></i>
+            </div>
+
+            <div class="stat-card" style="border-color: var(--success);">
+                <div class="stat-content">
+                    <div class="stat-value" id="success-rate" style="color: var(--success);">-%</div>
+                    <div class="stat-label">Ganho Genético</div>
+                </div>
+                <i class="ph ph-trend-up" style="font-size: 2rem; color: var(--success); opacity: 0.5;"></i>
+            </div>
+        </section>
+
+        <!-- 2 Colunas -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; margin-top: 3rem;">
+            <!-- Top Touros -->
+            <div class="card">
+                <h3 style="font-family: var(--font-serif); margin-bottom: 1.5rem;">Touros em Destaque</h3>
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Código</th>
+                                <th>Nome</th>
+                                <th>Usos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="top-bulls-table">
+                            <tr><td colspan="4" style="text-align: center; padding: 2rem;">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Alertas -->
+            <div class="card">
+                <h3 style="font-family: var(--font-serif); margin-bottom: 1.5rem;">Alertas</h3>
+                <div id="alerts-container">
+                    <p style="color: var(--text-tertiary); text-align: center; padding: 2rem;">Nenhum alerta no momento</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ações Rápidas -->
+        <section class="section" style="margin-top: 3rem;">
+            <h2 style="font-family: var(--font-serif); margin-bottom: 1.5rem;">Ações Rápidas</h2>
+            <div class="quick-actions-grid">
+                <a href="/manual" class="quick-action-card">
+                    <i class="ph-duotone ph-target"></i>
+                    <h3>Acasalamento Manual</h3>
+                    <p>Escolha uma fêmea e um touro específico</p>
+                </a>
+                <a href="/batch" class="quick-action-card">
+                    <i class="ph-duotone ph-clipboard-text"></i>
+                    <h3>Acasalamento em Lote</h3>
+                    <p>Encontre os melhores touros para múltiplas fêmeas</p>
+                </a>
+                <a href="/import" class="quick-action-card">
+                    <i class="ph-duotone ph-download-simple"></i>
+                    <h3>Importar Dados</h3>
+                    <p>Atualize fêmeas e touros</p>
+                </a>
+                <a href="/analytics" class="quick-action-card">
+                    <i class="ph-duotone ph-chart-bar"></i>
+                    <h3>Análises e Gráficos</h3>
+                    <p>Visualize estatísticas detalhadas</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Genefy - Sistema de Acasalamento Genético &copy; 2025</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/js/api.js"></script>
+    <script>
+        // Carregar dados ao iniciar
+        async function loadDashboard() {
+            try {
+                const data = await API.getDashboard();
+
+                // Atualizar stats
+                document.getElementById('total-females').textContent = data.summary.total_females || 0;
+                document.getElementById('total-bulls').textContent = data.summary.total_bulls || 0;
+                document.getElementById('total-matings').textContent = data.summary.total_matings || 0;
+
+                // Calcular taxa de sucesso/ganho genético (placeholder)
+                const successRate = data.summary.total_matings > 0
+                    ? Math.round((data.summary.total_matings / data.summary.total_females) * 100)
+                    : 0;
+                document.getElementById('success-rate').textContent = successRate + '%';
+
+                // Top touros
+                const topBullsTable = document.getElementById('top-bulls-table');
+                if (data.top_bulls && data.top_bulls.length > 0) {
+                    topBullsTable.innerHTML = data.top_bulls.slice(0, 5).map((bull, i) => `
+                        <tr>
+                            <td style="font-family: var(--font-mono); font-weight: 600; color: var(--primary);">0${i+1}</td>
+                            <td><strong>${bull.code}</strong></td>
+                            <td>${bull.name || '-'}</td>
+                            <td style="font-weight: 600;">${bull.count}</td>
+                        </tr>
+                    `).join('');
+                } else {
+                    topBullsTable.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-tertiary);">Nenhum acasalamento registrado ainda</td></tr>';
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar dashboard:', error);
+                // Mostrar valores padrão em caso de erro
+                document.getElementById('total-females').textContent = '0';
+                document.getElementById('total-bulls').textContent = '0';
+                document.getElementById('total-matings').textContent = '0';
+                document.getElementById('success-rate').textContent = '0%';
+            }
+        }
+
+        // Carregar ao iniciar
+        loadDashboard();
+    </script>
+</body>
+</html>

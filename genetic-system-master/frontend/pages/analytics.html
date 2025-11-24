@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análises - Genefy</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="window.location='/dashboard'">
+                <div class="brand-icon-box">
+                    <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Cow"
+                        style="width: 24px; height: 24px;">
+                </div>
+                <span class="brand-text">Genefy<span>.</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/herd">Rebanho</a></li>
+                <li><a href="/manual">Manual</a></li>
+                <li><a href="/batch">Lote</a></li>
+                <li><a href="/history">Histórico</a></li>
+                <li><a href="/analytics" class="active">Análises</a></li>
+                <li><a href="/import">Dados</a></li>
+                <li><a href="#" onclick="logout(event)" style="color: #dc2626;">Sair</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div>
+                <h1>Análises e Estatísticas</h1>
+                <p>:: Insights do Rebanho</p>
+            </div>
+        </header>
+
+        <section class="section">
+            <h2>Distribuições Genéticas</h2>
+            <div id="distributions-container"></div>
+        </section>
+
+        <section class="section">
+            <h2>Performance dos Touros</h2>
+            <div id="bulls-performance"></div>
+        </section>
+
+        <section class="section">
+            <h2>Análise de Acasalamentos</h2>
+            <div id="matings-analysis"></div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Sistema de Acasalamento - Gado Leiteiro &copy; 2025</p>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/logout.js"></script>
+    <!-- <script src="/js/auth.js"></script> -->
+    <script>
+        async function loadAnalytics() {
+            try {
+                // Distribuições
+                const dist = await API.getMultipleDistributions(['milk', 'productive_life', 'fertility_index']);
+                displayDistributions(dist);
+
+                // Performance de touros
+                const perf = await API.getBullPerformance();
+                displayBullsPerformance(perf);
+
+                // Análise de acasalamentos
+                const analysis = await API.getMatingAnalysis();
+                displayMatingsAnalysis(analysis);
+            } catch (error) {
+                console.error('Erro ao carregar analytics:', error);
+            }
+        }
+
+        function displayDistributions(dist) {
+            const container = document.getElementById('distributions-container');
+            container.innerHTML = Object.entries(dist).map(([index, stats]) => `
+                <div style="background: var(--gray-50); padding: 1.5rem; border-radius: var(--radius); margin-bottom: 1rem;">
+                    <h3>${index.toUpperCase()}</h3>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem;">
+                        <div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Mínimo</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${stats.min}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Média</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${stats.mean}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Mediana</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${stats.median}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.875rem; color: var(--text-secondary);">Máximo</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${stats.max}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function displayBullsPerformance(perf) {
+            const container = document.getElementById('bulls-performance');
+            if (!perf.ranking || perf.ranking.length === 0) {
+                container.innerHTML = '<p class="empty-state">Sem dados de performance</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Touro</th><th>Uso</th><th>Taxa Sucesso</th><th>Score Médio</th></tr>
+                    </thead>
+                    <tbody>
+                        ${perf.ranking.slice(0, 10).map(b => `
+                            <tr>
+                                <td><strong>${b.bull.code}</strong><br>${b.bull.name}</td>
+                                <td>${b.matings_count}</td>
+                                <td><span class="badge badge-success">${b.success_rate}%</span></td>
+                                <td><span class="badge badge-info">${b.avg_compatibility_score.toFixed(1)}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function displayMatingsAnalysis(analysis) {
+            const container = document.getElementById('matings-analysis');
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
+                    <div style="text-align: center; padding: 1.5rem; background: var(--gray-50); border-radius: var(--radius);">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--primary);">${analysis.total_matings}</div>
+                        <div>Total de Acasalamentos</div>
+                    </div>
+                    <div style="text-align: center; padding: 1.5rem; background: var(--gray-50); border-radius: var(--radius);">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--success);">${analysis.success_rate}%</div>
+                        <div>Taxa de Sucesso</div>
+                    </div>
+                    <div style="text-align: center; padding: 1.5rem; background: var(--gray-50); border-radius: var(--radius);">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--info);">${analysis.compatibility.average_score.toFixed(1)}</div>
+                        <div>Score Médio</div>
+                    </div>
+                    <div style="text-align: center; padding: 1.5rem; background: var(--gray-50); border-radius: var(--radius);">
+                        <div style="font-size: 2.5rem; font-weight: 700; color: var(--warning);">${analysis.inbreeding.average.toFixed(2)}%</div>
+                        <div>Consanguinidade Média</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        loadAnalytics();
+    </script>
+</body>
+
+</html>

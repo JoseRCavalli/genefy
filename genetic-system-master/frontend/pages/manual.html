@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acasalamento Manual - Genefy</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <!-- MESMA NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="window.location='/dashboard'">
+                <div class="brand-icon-box">
+                    <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Cow"
+                        style="width: 24px; height: 24px;">
+                </div>
+                <span class="brand-text">Genefy<span>.</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/herd">Rebanho</a></li>
+                <li><a href="/manual" class="active">Manual</a></li>
+                <li><a href="/batch">Lote</a></li>
+                <li><a href="/history">Histórico</a></li>
+                <li><a href="/analytics">Análises</a></li>
+                <li><a href="/import">Dados</a></li>
+                <li><a href="#" onclick="logout(event)" style="color: #dc2626;">Sair</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div>
+                <h1>Acasalamento Manual</h1>
+                <p>:: Simulação Individual de Compatibilidade</p>
+            </div>
+        </header>
+
+        <div class="mating-layout">
+            <!-- 1. Fêmea -->
+            <div class="step-card">
+                <div class="step-title">
+                    <i class="ph-fill ph-cow" style="color: var(--text-secondary);"></i>
+                    1. Selecionar Fêmea
+                </div>
+                <div class="form-group">
+                    <label class="form-label">BUSCAR POR BRINCO OU NOME</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="female-search" class="form-control" placeholder="Ex: 402 ou Mimosa">
+                        <button class="btn btn-primary" onclick="searchFemale()">
+                            <i class="ph-bold ph-magnifying-glass"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="female-result"
+                    style="display: none; background: var(--bg-subtle); padding: 1rem; border-radius: var(--radius); border: 1px dashed var(--border); margin-top: 1rem;">
+                    <!-- Preview será inserido aqui -->
+                </div>
+            </div>
+
+            <!-- 2. Touro (MULTI-SELECT) -->
+            <div class="step-card">
+                <div class="step-title">
+                    <i class="ph-fill ph-dna" style="color: var(--text-secondary);"></i>
+                    2. Selecionar Touro(s)
+                </div>
+
+                <div class="form-group multi-select-container">
+                    <label class="form-label">SELECIONAR (MÚLTIPLOS)</label>
+
+                    <!-- Input de busca -->
+                    <input type="text" id="bull-search" class="form-control" placeholder="Digite para buscar touros..."
+                        onkeyup="searchBulls()" style="margin-bottom: 0.5rem;">
+
+                    <!-- Multi-select box -->
+                    <div class="multi-select-box" onclick="toggleDropdown()">
+                        <div id="selected-tags-container"
+                            style="display: flex; gap: 0.5rem; flex-wrap: wrap; width: 100%;">
+                            <span style="color: var(--text-tertiary);">Clique para buscar...</span>
+                        </div>
+                        <i class="ph-bold ph-caret-down" style="margin-left: auto; color: var(--text-tertiary);"></i>
+                    </div>
+
+                    <!-- Dropdown -->
+                    <div id="bull-dropdown" class="dropdown-menu">
+                        <!-- Será preenchido dinamicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <button class="btn btn-primary" onclick="analyzeMating()" id="analyze-btn"
+                style="padding: 1rem 3rem; font-size: 1.1rem;" disabled>
+                <i class="ph-bold ph-flask"></i> Analisar Acasalamento
+            </button>
+        </div>
+
+        <!-- Área de Resultados -->
+        <div id="results-container" class="results-container">
+            <h2 style="font-family: var(--font-serif); text-align: center; margin-bottom: 2rem;">
+                Resultados da Análise
+            </h2>
+            <div id="results-grid" class="results-grid">
+                <!-- Cards serão inseridos aqui -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Genefy - Sistema de Acasalamento Genético &copy; 2025</p>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/logout.js"></script>
+    <!-- <script src="/js/auth.js"></script> -->
+    <script>
+        let selectedFemale = null;
+        let selectedBulls = [];
+        let allBulls = [];
+
+        // Carregar touros ao iniciar
+        async function loadBulls() {
+            try {
+                const data = await API.getBulls({ per_page: 100 });
+                allBulls = data.bulls;
+                renderBullsDropdown(allBulls);
+            } catch (error) {
+                console.error('Erro ao carregar touros:', error);
+            }
+        }
+
+        function renderBullsDropdown(bulls) {
+            const dropdown = document.getElementById('bull-dropdown');
+            dropdown.innerHTML = bulls.map(bull => `
+                <div class="dropdown-item" data-bull-id="${bull.id}"
+                     onclick="toggleBull(this, ${bull.id}, '${bull.code}')">
+                    <div class="custom-checkbox">
+                        <i class="ph-bold ph-check" style="font-size: 12px;"></i>
+                    </div>
+                    <div>
+                        <strong>${bull.code}</strong>
+                        <span style="font-size: 0.8rem; color: gray;">${bull.name || ''}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function searchBulls() {
+            const query = document.getElementById('bull-search').value.toLowerCase();
+            const filtered = allBulls.filter(b =>
+                b.code.toLowerCase().includes(query) ||
+                (b.name && b.name.toLowerCase().includes(query))
+            );
+            renderBullsDropdown(filtered);
+        }
+
+        async function searchFemale() {
+            const query = document.getElementById('female-search').value;
+            if (!query) return;
+
+            try {
+                const data = await API.getFemales({ search: query, per_page: 1 });
+                if (data.females.length > 0) {
+                    selectedFemale = data.females[0];
+                    displayFemaleResult();
+                } else {
+                    alert('Fêmea não encontrada');
+                }
+            } catch (error) {
+                alert('Erro ao buscar fêmea');
+            }
+        }
+
+        function displayFemaleResult() {
+            const result = document.getElementById('female-result');
+            result.style.display = 'flex';
+            result.style.gap = '1rem';
+            result.style.alignItems = 'center';
+            result.innerHTML = `
+                <div style="background: white; width: 48px; height: 48px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
+                    <i class="ph ph-cow" style="font-size: 1.5rem;"></i>
+                </div>
+                <div>
+                    <strong style="display: block; color: var(--text-main);">Vaca ${selectedFemale.reg_id || selectedFemale.internal_id}</strong>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                        ${selectedFemale.name || 'Sem nome'}
+                    </span>
+                </div>
+            `;
+            checkCanAnalyze();
+        }
+
+        function toggleDropdown() {
+            document.getElementById('bull-dropdown').classList.toggle('open');
+        }
+
+        function toggleBull(el, id, code) {
+            const bullData = allBulls.find(b => b.id === id);
+            const index = selectedBulls.findIndex(b => b.id === id);
+
+            if (index > -1) {
+                selectedBulls.splice(index, 1);
+                el.classList.remove('selected');
+            } else {
+                selectedBulls.push(bullData);
+                el.classList.add('selected');
+            }
+
+            renderTags();
+            checkCanAnalyze();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('selected-tags-container');
+            if (selectedBulls.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-tertiary);">Selecione touros...</span>';
+                return;
+            }
+            container.innerHTML = selectedBulls.map(bull => `
+                <div class="tag">
+                    ${bull.code}
+                    <i class="ph-bold ph-x" onclick="removeBull(${bull.id}, event)"></i>
+                </div>
+            `).join('');
+        }
+
+        function removeBull(id, e) {
+            e.stopPropagation();
+            selectedBulls = selectedBulls.filter(b => b.id !== id);
+
+            const items = document.querySelectorAll('.dropdown-item');
+            items.forEach(item => {
+                if (parseInt(item.dataset.bullId) === id) {
+                    item.classList.remove('selected');
+                }
+            });
+
+            renderTags();
+            checkCanAnalyze();
+        }
+
+        function checkCanAnalyze() {
+            const btn = document.getElementById('analyze-btn');
+            btn.disabled = !(selectedFemale && selectedBulls.length > 0);
+        }
+
+        async function analyzeMating() {
+            if (!selectedFemale || selectedBulls.length === 0) return;
+
+            const btn = document.getElementById('analyze-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner"></div> Analisando...';
+
+            try {
+                const results = [];
+
+                for (const bull of selectedBulls) {
+                    const response = await API.createManualMating(selectedFemale.id, bull.id, false);
+                    results.push({
+                        bull: bull,
+                        data: response
+                    });
+                }
+
+                displayResults(results);
+
+            } catch (error) {
+                alert('Erro ao analisar: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph-bold ph-flask"></i> Analisar Acasalamento';
+            }
+        }
+
+        function displayResults(results) {
+            const container = document.getElementById('results-container');
+            const grid = document.getElementById('results-grid');
+
+            grid.innerHTML = results.map(r => createResultCard(r)).join('');
+            container.style.display = 'block';
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function createResultCard(result) {
+            const { bull, data } = result;
+            const comp = data.analysis.compatibility;
+            const inb = data.analysis.inbreeding;
+            const pppv = data.analysis.pppv;
+
+            const gradeClass = comp.grade === 'A' ? 'grade-a' : 'grade-b';
+            const inbColor = inb.expected_inbreeding < 6 ? 'success' : 'warning';
+
+            return `
+                <div class="result-card ${gradeClass}">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <strong>Touro: ${bull.code}</strong>
+                        <span style="background: var(--${gradeClass === 'grade-a' ? 'success' : 'primary'}-bg);
+                                     color: var(--${gradeClass === 'grade-a' ? 'success' : 'primary'});
+                                     padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">
+                            ${comp.grade} - ${comp.grade === 'A' ? 'EXCELENTE' : 'BOM'}
+                        </span>
+                    </div>
+
+                    <div style="font-family: var(--font-serif); font-size: 3rem; font-weight: 700; line-height: 1; margin: 0.5rem 0;">
+                        ${comp.score.toFixed(1)}
+                    </div>
+                    <div style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">Índice Genefy</div>
+
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px dashed var(--border);">
+                        <span>Leite</span>
+                        <strong>+${pppv.milk?.pppv || 0}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px dashed var(--border);">
+                        <span>Proteína</span>
+                        <strong>+${pppv.protein?.pppv || 0}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                        <span>UDC</span>
+                        <strong>+${pppv.udc?.pppv || 0}</strong>
+                    </div>
+
+                    <div style="margin-top: 1rem; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem;
+                                background: var(--${inbColor}-bg); color: var(--${inbColor});">
+                        <i class="ph-fill ph-${inbColor === 'success' ? 'check-circle' : 'warning'}"></i>
+                        Consang: ${inb.expected_inbreeding.toFixed(2)}% (${inbColor === 'success' ? 'Ideal' : 'Atenção'})
+                    </div>
+                </div>
+            `;
+        }
+
+        // Fechar dropdown ao clicar fora
+        window.onclick = function (event) {
+            if (!event.target.closest('.multi-select-container')) {
+                document.getElementById('bull-dropdown').classList.remove('open');
+            }
+        }
+
+        // Carregar touros ao iniciar
+        loadBulls();
+    </script>
+</body>
+
+</html>

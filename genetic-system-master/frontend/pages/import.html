@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importar Dados - Genefy</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="window.location='/dashboard'">
+                <div class="brand-icon-box">
+                    <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Cow"
+                        style="width: 24px; height: 24px;">
+                </div>
+                <span class="brand-text">Genefy<span>.</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/herd">Rebanho</a></li>
+                <li><a href="/manual">Manual</a></li>
+                <li><a href="/batch">Lote</a></li>
+                <li><a href="/history">Histórico</a></li>
+                <li><a href="/analytics">Análises</a></li>
+                <li><a href="/import" class="active">Dados</a></li>
+                <li><a href="#" onclick="logout(event)" style="color: #dc2626;">Sair</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div>
+                <h1>Importar Dados</h1>
+                <p>:: Atualização de Banco de Dados</p>
+            </div>
+        </header>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Importar Fêmeas -->
+            <section class="section">
+                <h2>Importar Fêmeas (Excel)</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Formatos aceitos: .xlsx, .xls
+                </p>
+
+                <div class="form-group">
+                    <input type="file" id="females-file" accept=".xlsx,.xls" class="form-control">
+                </div>
+
+                <button id="import-females-btn" class="btn btn-primary" style="width: 100%;" disabled>
+                    <i class="ph ph-download-simple" style="font-size: 1rem; font-weight: bold;"></i>
+                    Importar Fêmeas
+                </button>
+
+                <div id="females-result" style="margin-top: 1.5rem;"></div>
+            </section>
+
+            <!-- Importar Touros -->
+            <section class="section">
+                <h2>Importar Touros (PDF)</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    Formato aceito: .pdf
+                </p>
+
+                <div class="form-group">
+                    <input type="file" id="bulls-file" accept=".pdf" class="form-control">
+                </div>
+
+                <button id="import-bulls-btn" class="btn btn-primary" style="width: 100%;" disabled>
+                    <i class="ph ph-download-simple" style="font-size: 1rem; font-weight: bold;"></i>
+                    Importar Touros
+                </button>
+
+                <div id="bulls-result" style="margin-top: 1.5rem;"></div>
+            </section>
+        </div>
+
+        <!-- Histórico de Importações -->
+        <section class="section" style="margin-top: 2rem;">
+            <h2>Histórico de Importações</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Tipo</th>
+                            <th>Arquivo</th>
+                            <th>Adicionados</th>
+                            <th>Atualizados</th>
+                            <th>Usuário</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table">
+                        <tr>
+                            <td colspan="6" class="loading">Carregando...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <p>Sistema de Acasalamento - Gado Leiteiro &copy; 2025</p>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/logout.js"></script>
+    <!-- <script src="/js/auth.js"></script> -->
+    <script>
+        // Habilitar botões quando arquivo selecionado
+        document.getElementById('females-file').addEventListener('change', (e) => {
+            document.getElementById('import-females-btn').disabled = !e.target.files.length;
+        });
+
+        document.getElementById('bulls-file').addEventListener('change', (e) => {
+            document.getElementById('import-bulls-btn').disabled = !e.target.files.length;
+        });
+
+        // Importar Fêmeas
+        document.getElementById('import-females-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('females-file');
+            const file = fileInput.files[0];
+            const btn = event.target;
+            const resultDiv = document.getElementById('females-result');
+
+            if (!file) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner"></div> Importando...';
+            resultDiv.innerHTML = '';
+
+            try {
+                const result = await API.importFemales(file);
+
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4><i class="ph ph-check-circle" style="color: #10b981; margin-right: 0.5rem;"></i>Importação Concluída!</h4>
+                        <ul style="margin: 0.5rem 0 0 1.5rem;">
+                            <li>Adicionadas: ${result.stats.added}</li>
+                            <li>Atualizadas: ${result.stats.updated}</li>
+                            <li>Sem mudanças: ${result.stats.unchanged}</li>
+                        </ul>
+                    </div>
+                `;
+
+                fileInput.value = '';
+                loadHistory();
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4><i class="ph ph-warning-circle" style="color: #dc2626; margin-right: 0.5rem;"></i>Erro na Importação</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-download-simple" style="font-size: 1rem; font-weight: bold;"></i> Importar Fêmeas';
+            }
+        });
+
+        // Importar Touros
+        document.getElementById('import-bulls-btn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('bulls-file');
+            const file = fileInput.files[0];
+            const btn = event.target;
+            const resultDiv = document.getElementById('bulls-result');
+
+            if (!file) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner"></div> Importando...';
+            resultDiv.innerHTML = '';
+
+            try {
+                const result = await API.importBulls(file);
+
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <h4><i class="ph ph-check-circle" style="color: #10b981; margin-right: 0.5rem;"></i>Importação Concluída!</h4>
+                        <ul style="margin: 0.5rem 0 0 1.5rem;">
+                            <li>Adicionados: ${result.stats.added}</li>
+                            <li>Atualizados: ${result.stats.updated}</li>
+                            <li>Sem mudanças: ${result.stats.unchanged}</li>
+                        </ul>
+                    </div>
+                `;
+
+                fileInput.value = '';
+                loadHistory();
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4><i class="ph ph-warning-circle" style="color: #dc2626; margin-right: 0.5rem;"></i>Erro na Importação</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-download-simple" style="font-size: 1rem; font-weight: bold;"></i> Importar Touros';
+            }
+        });
+
+        // Carregar histórico
+        async function loadHistory() {
+            try {
+                const data = await API.getImportHistory();
+                const tbody = document.getElementById('history-table');
+
+                if (data.imports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhuma importação registrada</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.imports.map(imp => `
+                    <tr>
+                        <td>${formatDateTime(imp.date)}</td>
+                        <td><span class="badge badge-info">${imp.type}</span></td>
+                        <td>${imp.filename}</td>
+                        <td>${imp.added}</td>
+                        <td>${imp.updated}</td>
+                        <td>${imp.user}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                document.getElementById('history-table').innerHTML =
+                    '<tr><td colspan="6" class="empty-state">Erro ao carregar histórico</td></tr>';
+            }
+        }
+
+        loadHistory();
+    </script>
+</body>
+
+</html>

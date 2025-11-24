@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebanho - Genefy</title>
+    <link rel="stylesheet" href="/css/main.css">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand" onclick="window.location='/dashboard'">
+                <div class="brand-icon-box">
+                    <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Cow"
+                        style="width: 24px; height: 24px;">
+                </div>
+                <span class="brand-text">Genefy<span>.</span></span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="/dashboard">Dashboard</a></li>
+                <li><a href="/herd" class="active">Rebanho</a></li>
+                <li><a href="/manual">Manual</a></li>
+                <li><a href="/batch">Lote</a></li>
+                <li><a href="/history">Histórico</a></li>
+                <li><a href="/analytics">Análises</a></li>
+                <li><a href="/import">Dados</a></li>
+                <li><a href="#" onclick="logout(event)" style="color: #dc2626;">Sair</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="page-header">
+            <div>
+                <h1>Rebanho</h1>
+                <p>:: Gestão de Animais</p>
+            </div>
+        </header>
+
+        <div class="card" style="text-align: center; padding: 4rem 2rem;">
+            <i class="ph ph-cow" style="font-size: 4rem; color: var(--text-tertiary); margin-bottom: 1rem;"></i>
+            <h2 style="font-family: var(--font-serif); color: var(--text-secondary); margin-bottom: 1rem;">
+                Página em Desenvolvimento
+            </h2>
+            <p style="color: var(--text-tertiary);">
+                A funcionalidade de gestão do rebanho estará disponível em breve.
+            </p>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>Genefy - Sistema de Acasalamento Genético &copy; 2025</p>
+    </footer>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/logout.js"></script>
+    <!-- <script src="/js/auth.js"></script> -->
+</body>
+
+</html>
