@@ -26,12 +26,23 @@ from backend.models.database import init_database, get_session
 
 def get_database_url():
     """
-    FORÇA SQLite sempre - ignorando DATABASE_URL
+    Retorna URL do banco de dados.
+    Prioridade: DATABASE_URL (PostgreSQL) > SQLite local
     """
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if database_url:
+        # Correção para SQLAlchemy (postgres:// -> postgresql://)
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
+        print("[DB] Usando PostgreSQL (Produção)")
+        return database_url
+        
+    # Fallback para SQLite
     base_dir = os.path.dirname(os.path.abspath(__file__))
     db_path = os.path.join(base_dir, 'database', 'cattle_breeding.db')
     sqlite_url = f'sqlite:///{db_path}'
-    print("[DB] FORCANDO SQLite (sem PostgreSQL)")
+    print("[DB] Usando SQLite (Local)")
     return sqlite_url
 
 # ============================================================================
@@ -305,10 +316,10 @@ def serve_assets(filename):
 
 if __name__ == '__main__':
     print("\n" + "="*60)
-    print("GENEFY - SQLITE FORCADO")
+    print("GENEFY - SERVER STARTING")
     print("="*60)
-    print(f"Banco: SQLite")
-    print(f"Porta: {os.environ.get('PORT', 5000)}")
+    print(f"Banco: {'PostgreSQL' if os.environ.get('DATABASE_URL') else 'SQLite'}")
+    print(f"Porta: {os.environ.get('PORT', 8003)}")
     print("="*60)
 
     port = int(os.environ.get('PORT', 8003))
