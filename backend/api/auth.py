@@ -90,10 +90,13 @@ def register():
         db.refresh(new_user)
 
         user_dict = new_user.to_dict()
+        # Criar sessão
+        session.permanent = True  # Mantém logado por 30 dias
+        session['user_id'] = new_user.id
         db.close()
 
         return jsonify({
-            'message': 'Usu�rio registrado com sucesso',
+            'message': 'Usurio registrado com sucesso',
             'user': user_dict
         }), 201
 
@@ -137,13 +140,14 @@ def login():
         # Verificar se usu�rio est� ativo
         if not user.is_active:
             db.close()
-            return jsonify({'error': 'Usu�rio desativado'}), 401
+            return jsonify({'error': 'Usurio desativado'}), 401
 
-        # Atualizar �ltimo login
+        # Atualizar ltimo login
         user.last_login = datetime.now()
         db.commit()
 
-        # Criar sess�o
+        # Criar sesso
+        session.permanent = True  # Mantém logado por 30 dias
         session['user_id'] = user.id
         session['user_name'] = user.name
         session['user_email'] = user.email

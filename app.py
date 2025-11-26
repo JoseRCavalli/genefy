@@ -7,7 +7,11 @@ from flask import Flask, render_template, send_from_directory, jsonify
 from flask_cors import CORS
 import os
 import logging
-from datetime import datetime
+from flask import Flask, render_template, send_from_directory, jsonify
+from flask_cors import CORS
+import os
+import logging
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -63,6 +67,7 @@ CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://12
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)  # Sessão dura 30 dias
 
 # Criar pastas sempre
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
