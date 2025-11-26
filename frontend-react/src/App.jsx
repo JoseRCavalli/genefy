@@ -1,140 +1,157 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Dna, TrendingUp, Database, Zap, ArrowRight, X, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
+import { Dna, ShieldCheck, ArrowRight, CheckCircle2, Menu, Microscope, Activity, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
-// ==============================
-// COMPONENTE: NoiseOverlay
-// ==============================
-function NoiseOverlay() {
-  return (
-    <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.015]">
-      <svg className="w-full h-full">
-        <filter id="noiseFilter">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#noiseFilter)" />
-      </svg>
-    </div>
-  );
-}
+// --- Utils & Assets ---
 
-// ==============================
-// COMPONENTE: ShaderBackground
-// ==============================
-function ShaderBackground() {
+const NoiseOverlay = () => (
+  <div className="fixed inset-0 w-full h-full pointer-events-none z-50 opacity-[0.03] mix-blend-overlay"
+    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}
+  />
+);
+
+// --- Shader Animation Component ---
+
+const ShaderBackground = () => {
   const canvasRef = useRef(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const particlesRef = useRef([]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
-    let animationId;
+    let width, height;
+    let particles = [];
+    let animationFrameId;
+    let mouse = { x: -1000, y: -1000 }; // Start mouse off-screen
 
-    const resizeCanvas = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    const resize = () => {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+      initParticles();
     };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
 
-    // Criar partículas
-    const particleCount = 80;
-    particlesRef.current = Array.from({ length: particleCount }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5,
-      radius: Math.random() * 2 + 1,
-    }));
+    class Particle {
+      constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.size = Math.random() * 2 + 0.5;
+        this.baseX = this.x;
+        this.baseY = this.y;
+        this.density = (Math.random() * 30) + 1;
+      }
 
-    const handleMouseMove = (e) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', handleMouseMove);
+      update() {
+        let dx = mouse.x - this.x;
+        let dy = mouse.y - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        let maxDistance = 200;
+        let forceDirectionX = dx / distance;
+        let forceDirectionY = dy / distance;
+        let force = (maxDistance - distance) / maxDistance;
 
-    function draw() {
-      ctx.fillStyle = 'rgba(253, 251, 249, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      particlesRef.current.forEach((p, i) => {
-        // Interação com mouse
-        const dx = mouseRef.current.x - p.x;
-        const dy = mouseRef.current.y - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 150) {
-          const force = (150 - dist) / 150;
-          p.vx -= (dx / dist) * force * 0.2;
-          p.vy -= (dy / dist) * force * 0.2;
+        if (distance < maxDistance) {
+          this.x -= forceDirectionX * force * this.density;
+          this.y -= forceDirectionY * force * this.density;
+        } else {
+          if (this.x !== this.baseX) {
+            let dx = this.x - this.baseX;
+            this.x -= dx / 20;
+          }
+          if (this.y !== this.baseY) {
+            let dy = this.y - this.baseY;
+            this.y -= dy / 20;
+          }
         }
+      }
 
-        p.x += p.vx;
-        p.y += p.vy;
-
-        // Fricção
-        p.vx *= 0.98;
-        p.vy *= 0.98;
-
-        // Bordas
-        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-
-        // Desenhar partícula
+      draw() {
+        ctx.fillStyle = 'rgba(139, 92, 246, 0.8)';
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.closePath();
         ctx.fill();
+      }
+    }
 
-        // Linhas entre partículas próximas
-        particlesRef.current.slice(i + 1).forEach((p2) => {
-          const dx2 = p.x - p2.x;
-          const dy2 = p.y - p2.y;
-          const dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
-          if (dist2 < 100) {
-            ctx.strokeStyle = `rgba(34, 197, 94, ${0.15 * (1 - dist2 / 100)})`;
-            ctx.lineWidth = 0.5;
+    const initParticles = () => {
+      particles = [];
+      let numberOfParticles = (width * height) / 15000; // Density
+      for (let i = 0; i < numberOfParticles; i++) {
+        particles.push(new Particle());
+      }
+    };
+
+    const connect = () => {
+      for (let a = 0; a < particles.length; a++) {
+        for (let b = a; b < particles.length; b++) {
+          let dx = particles[a].x - particles[b].x;
+          let dy = particles[a].y - particles[b].y;
+          let distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (distance < 120) {
+            let opacityValue = 1 - (distance / 120);
+            ctx.strokeStyle = `rgba(139, 92, 246, ${opacityValue * 0.5})`;
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
+            ctx.moveTo(particles[a].x, particles[a].y);
+            ctx.lineTo(particles[b].x, particles[b].y);
             ctx.stroke();
           }
-        });
-      });
+        }
+      }
+    };
 
-      animationId = requestAnimationFrame(draw);
-    }
-    draw();
+    const animate = () => {
+      ctx.clearRect(0, 0, width, height);
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+      }
+      connect();
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    const handleMouseMove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    };
+
+    window.addEventListener('resize', resize);
+    window.addEventListener('mousemove', handleMouseMove);
+
+    resize();
+    animate();
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationId);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0" />;
-}
+  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-0 pointer-events-none" />;
+};
 
-// ==============================
-// COMPONENTE: LoginPage
-// ==============================
-function LoginPage({ onBack }) {
-  const [activeTab, setActiveTab] = useState('login');
+// --- Login Component (Immersive Dark Mode) ---
+
+const LoginPage = ({ onBack }) => {
+  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
 
     try {
-      const endpoint = activeTab === 'login' ? '/api/auth/login' : '/api/auth/register';
-      const payload = activeTab === 'login'
+      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const payload = isLogin
         ? { email: formData.email, password: formData.password }
         : { name: formData.name, email: formData.email, password: formData.password };
 
@@ -150,11 +167,13 @@ function LoginPage({ onBack }) {
         // Redirect to dashboard on success
         window.location.href = '/dashboard';
       } else {
-        alert(data.error || 'Erro ao processar requisição');
+        setError(data.error || 'Erro ao processar requisição');
       }
-    } catch (error) {
-      console.error('Erro:', error);
-      alert('Erro ao conectar com o servidor');
+    } catch (err) {
+      console.error('Erro:', err);
+      setError('Erro ao conectar com o servidor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,440 +182,464 @@ function LoginPage({ onBack }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4"
+      transition={{ duration: 0.5 }}
+      className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4 overflow-hidden font-sans"
     >
-      {/* Background particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(30)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-green-400 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-            }}
-            animate={{
-              y: [0, -30, 0],
-              opacity: [0.2, 0.5, 0.2],
-            }}
-            transition={{
-              duration: 3 + Math.random() * 2,
-              repeat: Infinity,
-              delay: Math.random() * 2,
-            }}
-          />
-        ))}
-      </div>
+      {/* Immersive Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-indigo-950/40 to-slate-950 z-0"></div>
+      <ShaderBackground />
 
       {/* Login Card */}
       <motion.div
-        initial={{ scale: 0.9, y: 20 }}
+        initial={{ scale: 0.95, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="relative w-full max-w-md"
+        transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
+        className="relative z-10 w-full max-w-md"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl blur-xl opacity-20" />
-
-        <div className="relative bg-slate-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700/50 overflow-hidden">
-          {/* Close button */}
-          <button
-            onClick={onBack}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"
-          >
-            <X size={24} />
-          </button>
-
+        <div className="bg-slate-900/50 backdrop-blur-2xl rounded-none border border-white/10 shadow-2xl p-8 md:p-12">
           {/* Header */}
-          <div className="p-8 pb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                <Dna className="w-6 h-6 text-white" />
-              </div>
-              <h2 className="text-2xl font-bold text-white">Genefy</h2>
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 mb-6 rounded-sm shadow-lg shadow-indigo-500/20">
+              <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Logo" className="w-6 h-6" />
             </div>
-            <p className="text-slate-400 text-sm">Sistema de Acasalamento Genético</p>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-slate-700/50 px-8">
-            <button
-              onClick={() => setActiveTab('login')}
-              className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
-                activeTab === 'login' ? 'text-green-400' : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              Entrar
-              {activeTab === 'login' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500"
-                />
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('register')}
-              className={`flex-1 py-3 text-sm font-medium transition-colors relative ${
-                activeTab === 'register' ? 'text-green-400' : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              Criar Conta
-              {activeTab === 'register' && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-500"
-                />
-              )}
-            </button>
+            <h1 className="text-3xl font-serif text-white mb-2 tracking-tight">
+              {isLogin ? 'Bem-vindo de volta' : 'Criar Nova Conta'}
+            </h1>
+            <p className="text-indigo-200/60 text-sm font-mono uppercase tracking-wider">
+              {isLogin ? ':: GERENCIE SEU REBANHO ::' : ':: REVOLUCIONE SEU REBANHO ::'}
+            </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-4">
-            <AnimatePresence mode="wait">
-              {activeTab === 'register' && (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Campo Nome - Apenas no Cadastro */}
+            <AnimatePresence>
+              {!isLogin && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="space-y-4"
+                  className="group overflow-hidden"
                 >
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Nome Completo
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-slate-900/50 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors"
-                        placeholder="Seu nome"
-                        required={activeTab === 'register'}
-                      />
-                    </div>
-                  </div>
+                  <label className="block text-xs font-mono text-indigo-300 mb-2 uppercase tracking-wider">Nome da Propriedade / Proprietário</label>
+                  <input
+                    type="text"
+                    className="w-full bg-white/5 border border-white/10 rounded-sm px-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all font-sans"
+                    placeholder="Ex: Fazenda Cavalli"
+                    value={formData.name}
+                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Email
-              </label>
+            <div className="group">
+              <label className="block text-xs font-mono text-indigo-300 mb-2 uppercase tracking-wider">Email Corporativo</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-indigo-400 transition-colors" />
                 <input
                   type="email"
+                  className="w-full bg-white/5 border border-white/10 rounded-sm pl-12 pr-4 py-3 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all font-sans"
+                  placeholder="nome@fazenda.com"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full bg-slate-900/50 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors"
-                  placeholder="seu@email.com"
-                  required
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Senha
-              </label>
+            <div className="group">
+              <label className="block text-xs font-mono text-indigo-300 mb-2 uppercase tracking-wider">Senha</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 group-focus-within:text-indigo-400 transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full bg-slate-900/50 border border-slate-700 rounded-lg pl-10 pr-12 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:border-green-500 transition-colors"
+                  className="w-full bg-white/5 border border-white/10 rounded-sm pl-12 pr-12 py-3 text-white placeholder-white/20 focus:outline-none focus:border-indigo-500 focus:bg-indigo-500/10 transition-all font-sans"
                   placeholder="••••••••"
-                  required
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white transition-colors">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-sm text-red-300 text-sm">
+                {error}
+              </div>
+            )}
+
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium py-2.5 rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              disabled={loading}
+              className="w-full py-4 mt-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:cursor-not-allowed text-white font-medium tracking-wide rounded-sm shadow-lg shadow-indigo-900/50 transition-all flex items-center justify-center gap-2 group"
             >
-              {activeTab === 'login' ? 'Entrar' : 'Criar Conta'}
+              <span>{loading ? 'Processando...' : (isLogin ? 'Acessar Sistema' : 'Começar Agora')}</span>
+              {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
             </button>
           </form>
+
+          {/* Footer */}
+          <div className="mt-8 flex flex-col items-center gap-4 text-sm text-slate-400">
+            <button onClick={() => setIsLogin(!isLogin)} className="hover:text-white transition-colors">
+              {isLogin ? 'Novo por aqui? Crie sua conta' : 'Já é cliente? Fazer login'}
+            </button>
+            <button onClick={onBack} className="text-xs font-mono text-slate-600 hover:text-indigo-400 transition-colors mt-4 flex items-center gap-2">
+              ← RETORNAR AO SITE
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>
   );
-}
+};
 
-// ==============================
-// COMPONENTE: Navbar
-// ==============================
-function Navbar({ onLoginClick }) {
-  const [scrolled, setScrolled] = useState(false);
+// --- Landing Page Components (Light Mode) ---
+
+const Navbar = ({ onLoginClick }) => {
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 50);
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   return (
-    <motion.nav
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-white/80 backdrop-blur-md shadow-lg' : 'bg-transparent'
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-              <Dna className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              Genefy
-            </span>
+    <nav className={`fixed top-0 w-full z-40 transition-all duration-500 border-b ${isScrolled ? 'bg-white/90 backdrop-blur-md border-slate-200 py-3' : 'bg-transparent border-transparent py-6'}`}>
+      <div className="max-w-[1400px] mx-auto px-6 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-indigo-700 rounded-none flex items-center justify-center shadow-sm">
+            <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Logo" className="w-5 h-5" />
           </div>
-          <button
-            onClick={onLoginClick}
-            className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-full hover:shadow-lg hover:scale-105 transition-all"
-          >
-            Acessar Sistema
+          <span className="text-2xl font-serif tracking-tight text-slate-900">
+            Genefy<span className="text-indigo-600">.</span>
+          </span>
+        </div>
+
+        <div className="hidden md:flex items-center gap-12">
+          {['Acasalamento', 'Genética', 'Sobre', 'Planos'].map((item) => (
+            <a key={item} href={`#${item.toLowerCase()}`} className="text-sm uppercase tracking-widest text-slate-500 hover:text-indigo-700 font-medium transition-colors">
+              {item}
+            </a>
+          ))}
+        </div>
+
+        <div className="hidden md:flex items-center gap-6">
+          <button onClick={onLoginClick} className="text-slate-900 font-medium hover:text-indigo-700 transition-colors">Log in</button>
+          <button onClick={onLoginClick} className="px-6 py-2.5 bg-slate-900 text-white text-sm tracking-wide hover:bg-indigo-700 transition-colors rounded-sm shadow-lg shadow-slate-900/10">
+            Começar Agora
           </button>
         </div>
+
+        <div className="md:hidden">
+          <Menu className="text-slate-900" />
+        </div>
       </div>
-    </motion.nav>
+    </nav>
   );
-}
+};
 
-// ==============================
-// COMPONENTE: Hero
-// ==============================
-function Hero({ onCtaClick }) {
+const Hero = ({ onCtaClick }) => {
+  const { scrollY } = useScroll();
+  const y1 = useTransform(scrollY, [0, 500], [0, 100]);
+  const y2 = useTransform(scrollY, [0, 500], [0, -50]);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
-      <ShaderBackground />
+    <section className="relative pt-40 pb-20 lg:pt-52 lg:pb-32 overflow-hidden min-h-[90vh] flex items-center border-b border-slate-200 bg-[#FDFBF9]">
+      <div className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(to right, #E2E8F0 1px, transparent 1px), linear-gradient(to bottom, #E2E8F0 1px, transparent 1px)',
+          backgroundSize: '60px 60px',
+          opacity: 0.4
+        }}>
+      </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
+      <div className="max-w-[1400px] mx-auto px-6 relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+        <div className="lg:col-span-7 flex flex-col gap-8">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-block mb-6 px-4 py-2 bg-green-50 border border-green-200 rounded-full"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <span className="text-green-700 text-sm font-medium">
-              🧬 Tecnologia de Ponta em Genética
-            </span>
+            <div className="inline-flex items-center gap-3 mb-8 border-l-2 border-indigo-600 pl-4">
+              <span className="text-indigo-700 font-mono text-sm uppercase tracking-widest">Versão 2.0 Live</span>
+              <div className="h-px w-8 bg-indigo-200"></div>
+              <span className="text-slate-500 text-sm italic font-serif">Validado na Fazenda Cavalli</span>
+            </div>
+
+            <h1 className="text-6xl sm:text-7xl xl:text-8xl font-serif text-slate-900 leading-[0.95] tracking-tight mb-8">
+              A ciência da <br />
+              <span className="italic text-indigo-700">evolução</span> bovina.
+            </h1>
+
+            <p className="text-xl text-slate-600 max-w-xl leading-relaxed font-light font-sans">
+              Não é apenas software. É um algoritmo de precisão que transforma índices genéticos complexos em decisões de acasalamento claras.
+            </p>
           </motion.div>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-slate-900 mb-6 leading-tight">
-            Otimização Genética
-            <br />
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              Baseada em Algoritmos
-            </span>
-          </h1>
-
-          <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Sistema avançado de acasalamento para gado leiteiro utilizando algoritmos genéticos e
-            análise de consanguinidade em tempo real.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={onCtaClick}
-              className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2 group"
-            >
-              Começar Agora
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="flex flex-wrap gap-5 mt-4"
+          >
+            <button onClick={onCtaClick} className="px-8 py-4 bg-indigo-700 text-white text-lg hover:bg-slate-900 transition-all duration-300 rounded-sm shadow-xl shadow-indigo-900/10 flex items-center gap-3 group">
+              Solicitar Acesso
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </motion.button>
+            </button>
+            <button className="px-8 py-4 bg-white border border-slate-300 text-slate-700 text-lg hover:bg-slate-50 hover:border-slate-400 transition-all rounded-sm">
+              Ver Metodologia
+            </button>
+          </motion.div>
+
+          <div className="flex items-center gap-8 mt-8 text-sm text-slate-500 font-mono">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-indigo-600" />
+              <span>Rigor Científico</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-indigo-600" />
+              <span>Integração ABS/CRV</span>
+            </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Floating Cards */}
-        <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {[
-            { icon: Dna, title: 'Algoritmos Genéticos', desc: 'Otimização inteligente' },
-            { icon: TrendingUp, title: 'Ganho Genético', desc: 'Resultados mensuráveis' },
-            { icon: Database, title: 'Big Data', desc: 'Análise em tempo real' },
-          ].map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 + i * 0.1 }}
-              className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-green-100 hover:border-green-300 transition-all hover:-translate-y-2"
-            >
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center mb-4">
-                <item.icon className="w-6 h-6 text-white" />
+        <div className="lg:col-span-5 relative h-[600px] hidden lg:block">
+          <motion.div style={{ y: y1 }} className="absolute right-0 top-0 w-[90%] h-[80%] bg-slate-900 z-10 overflow-hidden shadow-2xl border-4 border-white">
+            <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+              <div className="flex gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500/50"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/50"></div>
               </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h3>
-              <p className="text-slate-600 text-sm">{item.desc}</p>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ==============================
-// COMPONENTE: BentoGrid
-// ==============================
-function BentoGrid() {
-  const features = [
-    {
-      title: 'Algoritmo Genético',
-      desc: 'Seleção natural aplicada ao melhoramento genético',
-      gradient: 'from-green-400 to-emerald-500',
-      size: 'md:col-span-2',
-    },
-    {
-      title: 'Análise de Consanguinidade',
-      desc: 'Prevenção automática de endogamia',
-      gradient: 'from-emerald-400 to-teal-500',
-      size: 'md:col-span-1',
-    },
-    {
-      title: 'Dashboard em Tempo Real',
-      desc: 'Visualize métricas e ganhos genéticos',
-      gradient: 'from-teal-400 to-cyan-500',
-      size: 'md:col-span-1',
-    },
-    {
-      title: 'Importação Automática',
-      desc: 'Excel e PDF processados automaticamente',
-      gradient: 'from-cyan-400 to-blue-500',
-      size: 'md:col-span-2',
-    },
-  ];
-
-  return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-slate-50 to-white relative">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-            Recursos Avançados
-          </h2>
-          <p className="text-xl text-slate-600">
-            Tecnologia de ponta para o melhoramento genético
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {features.map((feature, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.1 }}
-              viewport={{ once: true }}
-              className={`${feature.size} group relative overflow-hidden rounded-3xl bg-gradient-to-br ${feature.gradient} p-8 text-white hover:scale-[1.02] transition-transform cursor-pointer`}
-            >
-              <div className="relative z-10">
-                <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
-                <p className="text-white/90">{feature.desc}</p>
+              <span className="font-mono text-xs text-slate-500">analysis_module_v2.py</span>
+            </div>
+            <div className="p-8 font-mono text-sm space-y-4">
+              <div className="flex justify-between text-indigo-400">
+                <span>{'>'} TARGET_HERD</span>
+                <span>500_COWS</span>
               </div>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
-            </motion.div>
-          ))}
+              <div className="h-px w-full bg-slate-800 my-4"></div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-slate-300">
+                  <span>Inbreeding.coefficient</span>
+                  <span className="text-green-400">2.4% [OPTIMAL]</span>
+                </div>
+                <div className="flex justify-between text-slate-300">
+                  <span>Milk_Production.projected</span>
+                  <span>+12.5%</span>
+                </div>
+              </div>
+              <div className="mt-12 p-4 bg-indigo-900/20 border border-indigo-500/30 text-indigo-200 text-xs leading-relaxed">
+                ALGORITHM NOTE: Touro "Titanium" selecionado para Lote #4. Compatibilidade genealógica confirmada até 3ª geração.
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+          </motion.div>
+
+          <motion.div style={{ y: y2 }} className="absolute left-0 bottom-10 w-[60%] bg-white p-8 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-slate-100 z-20">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="p-3 bg-indigo-50 text-indigo-700 rounded-none border border-indigo-100">
+                <Microscope size={24} />
+              </div>
+              <div>
+                <h4 className="font-serif text-lg text-slate-900">Análise de Lote</h4>
+                <p className="text-xs text-slate-500 uppercase tracking-wider">Processando</p>
+              </div>
+            </div>
+            <div className="flex items-end gap-1 h-16 mt-2">
+              {[40, 70, 45, 90, 65, 80, 50].map((h, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{ duration: 1, delay: i * 0.1, repeat: Infinity, repeatType: "reverse", repeatDelay: 2 }}
+                  className="flex-1 bg-slate-900"
+                />
+              ))}
+            </div>
+          </motion.div>
         </div>
       </div>
     </section>
   );
-}
+};
 
-// ==============================
-// COMPONENTE: TechnicalSpecs
-// ==============================
-function TechnicalSpecs() {
-  const specs = [
-    { label: 'Backend', value: 'Python + Flask' },
-    { label: 'Frontend', value: 'React + Tailwind' },
-    { label: 'Banco de Dados', value: 'SQLite' },
-    { label: 'Algoritmo', value: 'Genético + IA' },
-  ];
-
+const BentoGrid = () => {
   return (
-    <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900 text-white">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <Zap className="w-16 h-16 mx-auto mb-6 text-green-400" />
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">Stack Técnico</h2>
-          <p className="text-xl text-slate-400">
-            Desenvolvido com as melhores tecnologias
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {specs.map((spec, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              viewport={{ once: true }}
-              className="bg-slate-800 rounded-2xl p-6 border border-slate-700 hover:border-green-500 transition-colors"
-            >
-              <div className="text-green-400 text-sm font-semibold mb-2">{spec.label}</div>
-              <div className="text-white text-lg font-bold">{spec.value}</div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ==============================
-// COMPONENTE: Footer
-// ==============================
-function Footer() {
-  return (
-    <footer className="bg-slate-900 text-slate-400 py-12 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-            <Dna className="w-5 h-5 text-white" />
+    <section id="acasalamento" className="py-32 bg-white relative border-b border-slate-200">
+      <div className="max-w-[1400px] mx-auto px-6">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
+          <div className="max-w-2xl">
+            <h2 className="text-5xl font-serif text-slate-900 mb-6">Controle Total.<br />Sem Suposições.</h2>
+            <p className="text-lg text-slate-600">
+              Substituímos planilhas manuais e intuição por análise de dados robusta.
+              Cada decisão é respaldada por milhares de pontos de dados genéticos.
+            </p>
           </div>
-          <span className="text-xl font-bold text-white">Genefy</span>
+          <div className="hidden md:block">
+            <ArrowRight size={48} className="text-slate-200" strokeWidth={1} />
+          </div>
         </div>
-        <p className="text-sm">
-          Sistema de Acasalamento Genético para Gado Leiteiro &copy; 2025
-        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 grid-rows-2 gap-0 border-t border-l border-slate-200">
+          <div className="md:col-span-2 row-span-2 p-12 border-r border-b border-slate-200 hover:bg-slate-50 transition-colors group relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Dna size={200} />
+            </div>
+            <div className="relative z-10 h-full flex flex-col justify-between">
+              <div>
+                <div className="w-12 h-12 bg-indigo-900 text-white flex items-center justify-center mb-8">
+                  <span className="font-serif text-xl italic">01</span>
+                </div>
+                <h3 className="text-3xl font-serif text-slate-900 mb-4">Algoritmo de Acasalamento</h3>
+                <p className="text-slate-600 text-lg max-w-md leading-relaxed">
+                  Nossa engine cruza o perfil genético de cada fêmea com catálogos inteiros (SelectSires, ABS).
+                  O resultado não é apenas um touro, mas uma previsão da descendência.
+                </p>
+              </div>
+              <div className="mt-12 flex gap-4">
+                <div className="px-4 py-2 bg-green-100 text-green-800 text-sm font-mono border border-green-200">CONSANGUINIDADE &lt; 6%</div>
+                <div className="px-4 py-2 bg-indigo-50 text-indigo-800 text-sm font-mono border border-indigo-100">DADOS IMPORTADOS</div>
+              </div>
+            </div>
+          </div>
+          <div className="p-10 border-r border-b border-slate-200 hover:bg-slate-50 transition-colors group">
+            <ShieldCheck className="w-8 h-8 text-indigo-700 mb-6" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Proteção Genealógica</h3>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              Análise profunda até o avô materno. O sistema alerta automaticamente (Verde/Amarelo/Vermelho) riscos genéticos.
+            </p>
+          </div>
+          <div className="p-10 border-r border-b border-slate-200 hover:bg-slate-50 transition-colors group">
+            <Activity className="w-8 h-8 text-indigo-700 mb-6" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">Analytics em Lote</h3>
+            <p className="text-slate-500 text-sm leading-relaxed">
+              Otimize grupos de 60-70 vacas simultaneamente. O algoritmo equilibra o melhoramento genético com a praticidade do manejo.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const TechnicalSpecs = () => {
+  return (
+    <section className="py-32 bg-slate-900 text-white relative overflow-hidden">
+      <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}></div>
+      <div className="max-w-[1400px] mx-auto px-6 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+          <div>
+            <h2 className="text-4xl md:text-6xl font-serif mb-10 leading-tight">
+              Compatibilidade <br />
+              <span className="text-indigo-400 italic">Universal</span>
+            </h2>
+            <div className="space-y-8">
+              {[{ title: "Fontes de Dados", desc: "Importação nativa de Herd Dynamics, Catálogos PDF e Excel." }, { title: "Indicadores", desc: "Processamento de mais de 165 índices genéticos por animal." }, { title: "Infraestrutura", desc: "Arquitetura escalável pronta para rebanhos de alta performance." }].map((item, i) => (
+                <div key={i} className="flex gap-6 border-b border-slate-800 pb-8 last:border-0">
+                  <div className="font-mono text-indigo-400 text-xl">0{i + 1}</div>
+                  <div>
+                    <h4 className="text-xl font-bold mb-2">{item.title}</h4>
+                    <p className="text-slate-400">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-slate-800 p-8 rounded-sm border border-slate-700 font-mono text-xs md:text-sm text-slate-300 shadow-2xl">
+            <div className="flex gap-2 mb-6 border-b border-slate-700 pb-4">
+              <div className="w-3 h-3 rounded-full bg-slate-600"></div>
+              <div className="w-3 h-3 rounded-full bg-slate-600"></div>
+              <span className="ml-auto opacity-50">import_log.txt</span>
+            </div>
+            <div className="space-y-3">
+              <p><span className="text-green-400">[SUCCESS]</span> Connected to Herd Dynamics API</p>
+              <p><span className="text-blue-400">[INFO]</span> Loading genetic markers for Lot #05...</p>
+              <p><span className="text-yellow-400">[WARN]</span> Cow #402: High inbreeding risk (7.1%)</p>
+              <p><span className="text-blue-400">[ACTION]</span> Re-routing: Suggesting 'Vortex' (0.5% Coeff)</p>
+              <p><span className="text-green-400">[DONE]</span> Optimization complete.</p>
+              <div className="h-4 w-4 bg-indigo-500 animate-pulse mt-4"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+const Footer = () => {
+  return (
+    <footer className="bg-white pt-32 pb-12 border-t border-slate-200">
+      <div className="max-w-[1400px] mx-auto px-6">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-24">
+          <div>
+            <span className="text-3xl font-serif font-bold tracking-tight text-slate-900 block mb-6">
+              Genefy<span className="text-indigo-600">.</span>
+            </span>
+            <p className="text-slate-500 max-w-xs">
+              Inteligência artificial aplicada ao melhoramento genético.<br /><br />
+              Medianeira, PR — Brasil
+            </p>
+          </div>
+          <div className="flex gap-20">
+            <div>
+              <h4 className="font-mono text-xs uppercase tracking-widest text-slate-400 mb-6">Plataforma</h4>
+              <ul className="space-y-4 text-slate-900 font-medium">
+                <li><a href="#" className="hover:text-indigo-600 transition-colors">Dashboard</a></li>
+                <li><a href="#" className="hover:text-indigo-600 transition-colors">Tecnologia</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-mono text-xs uppercase tracking-widest text-slate-400 mb-6">Empresa</h4>
+              <ul className="space-y-4 text-slate-900 font-medium">
+                <li><a href="#" className="hover:text-indigo-600 transition-colors">Sobre</a></li>
+                <li><a href="#" className="hover:text-indigo-600 transition-colors">Contato</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-slate-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-400 font-mono">
+          <p>&copy; 2025 Genefy Systems.</p>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-slate-900">Privacy Policy</a>
+            <a href="#" className="hover:text-slate-900">Terms of Service</a>
+          </div>
+        </div>
       </div>
     </footer>
-  );
+  )
 }
 
-// ==============================
-// COMPONENTE PRINCIPAL
-// ==============================
+// --- Main Component ---
+
 export default function GenefyLanding() {
   const [showLogin, setShowLogin] = useState(false);
 
   return (
-    <div className="bg-[#FDFBF9] min-h-screen font-sans text-slate-900">
+    <div className="bg-[#FDFBF9] min-h-screen font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+        :root { --font-serif: 'Playfair Display', serif; --font-sans: 'Inter', sans-serif; --font-mono: 'JetBrains Mono', monospace; }
+        .font-serif { font-family: var(--font-serif); }
+        .font-sans { font-family: var(--font-sans); }
+        .font-mono { font-family: var(--font-mono); }
+      `}</style>
+
       <NoiseOverlay />
+
+      {/* Page Content */}
       <Navbar onLoginClick={() => setShowLogin(true)} />
       <Hero onCtaClick={() => setShowLogin(true)} />
       <BentoGrid />
       <TechnicalSpecs />
       <Footer />
+
+      {/* Login Overlay */}
       <AnimatePresence>
-        {showLogin && <LoginPage onBack={() => setShowLogin(false)} />}
+        {showLogin && <LoginPage onBack={() => setShowLogin(false)} key="login-modal" />}
       </AnimatePresence>
     </div>
   );

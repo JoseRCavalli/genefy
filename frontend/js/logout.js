@@ -11,14 +11,14 @@ async function logout(event) {
 
         if (response.ok) {
             // Redirect to React Landing Page
-            window.location.href = 'http://localhost:5173/';
+            window.location.href = '/';
         } else {
             console.error('Logout failed');
             // Force redirect anyway
-            window.location.href = 'http://localhost:5173/';
+            window.location.href = '/';
         }
     } catch (error) {
         console.error('Error during logout:', error);
-        window.location.href = 'http://localhost:5173/';
+        window.location.href = '/';
     }
 }

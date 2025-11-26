@@ -8,6 +8,10 @@ from flask_cors import CORS
 import os
 import logging
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configuração de logs
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +49,7 @@ app = Flask(__name__,
 CORS(app, resources={r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}}, supports_credentials=True)
 
 # Configurações
-app.config['SECRET_KEY'] = 'cattle-breeding-secret-key-sqlite'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 app.config['UPLOAD_FOLDER'] = os.path.join(BASE_DIR, 'uploads')
 
@@ -89,13 +93,18 @@ except Exception as e:
 
 @app.route('/')
 def index():
-    """Dashboard do sistema (acesso direto)"""
+    """Landing Page (React)"""
+    return send_from_directory('frontend/react_app', 'index.html')
+
+@app.route('/dashboard')
+def dashboard():
+    """Dashboard do sistema (requer autenticação)"""
     return send_from_directory('frontend/pages', 'index.html')
 
-# @app.route('/dashboard')
-# def dashboard():
-#     """Dashboard do sistema (requer autenticação)"""
-#     return send_from_directory('frontend/pages', 'index.html')
+@app.route('/react-static/<path:filename>')
+def serve_react_static(filename):
+    """Arquivos estáticos do React"""
+    return send_from_directory('frontend/react_app', filename)
 
 @app.route('/api/health')
 def health_check():
@@ -302,5 +311,5 @@ if __name__ == '__main__':
     print(f"Porta: {os.environ.get('PORT', 5000)}")
     print("="*60)
 
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 8003))
     app.run(host='0.0.0.0', port=port, debug=False)
