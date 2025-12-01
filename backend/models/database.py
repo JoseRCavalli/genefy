@@ -493,11 +493,15 @@ class ImportHistory(Base):
 # INICIALIZAÇÃO DO BANCO
 # ============================================================================
 
-def init_database(db_path='sqlite:///cattle_breeding.db'):
+def init_database(db_path='sqlite:///cattle_breeding.db', **kwargs):
     """
     Inicializa o banco de dados
     """
-    engine = create_engine(db_path, echo=False)
+    # Configurações padrão
+    if 'pool_pre_ping' not in kwargs and 'sqlite' not in db_path:
+        kwargs['pool_pre_ping'] = True
+        
+    engine = create_engine(db_path, echo=False, **kwargs)
     Base.metadata.create_all(engine)
     return engine
 
