@@ -1,9 +1,10 @@
 """
-Módulo de Cálculos Genéticos Básicos
-Mantido para compatibilidade com código legado
+Módulo de Cálculos Genéticos - Stub para compatibilidade
 """
 
-from backend.services.genetics_complete import GeneticCalculator
+class GeneticCalculatorStub:
+    """Stub class para evitar erros de import"""
+    pass
 
-# Criar instância global da calculadora
-genetic_calculator = GeneticCalculator()
+# Instância global
+genetic_calculator = GeneticCalculatorStub()
