@@ -39,6 +39,10 @@
                 <h1>Acasalamento Manual</h1>
                 <p>:: Simulação Individual de Compatibilidade</p>
             </div>
+            <!-- Contador de dados carregados -->
+            <div id="data-status" style="font-size: 0.85rem; color: var(--text-secondary);">
+                Carregando dados...
+            </div>
         </header>
 
         <div class="mating-layout">
@@ -47,15 +51,22 @@
                 <div class="step-title">
                     <i class="ph-fill ph-cow" style="color: var(--text-secondary);"></i>
                     1. Selecionar Fêmea
+                    <span id="female-count" style="font-size: 0.8rem; color: var(--text-tertiary); margin-left: auto;"></span>
                 </div>
                 <div class="form-group">
                     <label class="form-label">BUSCAR POR BRINCO OU NOME</label>
                     <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="female-search" class="form-control" placeholder="Ex: 402 ou Mimosa">
-                        <button class="btn btn-primary" onclick="searchFemale()">
+                        <input type="text" id="female-search" class="form-control" placeholder="Ex: 402 ou Mimosa"
+                               onkeyup="searchFemales()">
+                        <button class="btn btn-primary" onclick="searchFemales()">
                             <i class="ph-bold ph-magnifying-glass"></i>
                         </button>
                     </div>
+                </div>
+
+                <!-- Lista de fêmeas (dropdown) -->
+                <div id="female-dropdown" class="dropdown-menu" style="max-height: 300px; overflow-y: auto; display: none;">
+                    <!-- Será preenchido dinamicamente -->
                 </div>
 
                 <div id="female-result"
@@ -69,6 +80,7 @@
                 <div class="step-title">
                     <i class="ph-fill ph-dna" style="color: var(--text-secondary);"></i>
                     2. Selecionar Touro(s)
+                    <span id="bull-count" style="font-size: 0.8rem; color: var(--text-tertiary); margin-left: auto;"></span>
                 </div>
 
                 <div class="form-group multi-select-container">
@@ -88,7 +100,7 @@
                     </div>
 
                     <!-- Dropdown -->
-                    <div id="bull-dropdown" class="dropdown-menu">
+                    <div id="bull-dropdown" class="dropdown-menu" style="max-height: 400px; overflow-y: auto;">
                         <!-- Será preenchido dinamicamente -->
                     </div>
                 </div>
@@ -118,36 +130,127 @@
     </footer>
 
     <script src="/js/api.js"></script>
-    <script src="/js/api.js"></script>
     <script src="/js/logout.js"></script>
-    <!-- <script src="/js/auth.js"></script> -->
     <script>
         let selectedFemale = null;
         let selectedBulls = [];
         let allBulls = [];
+        let allFemales = [];
 
-        // Carregar touros ao iniciar
-        async function loadBulls() {
+        // ============================================================
+        // CORREÇÃO: Carregar TODOS os touros (sem limite)
+        // ============================================================
+        async function loadAllBulls() {
             try {
-                const data = await API.getBulls({ per_page: 100 });
-                allBulls = data.bulls;
+                let allData = [];
+                let page = 1;
+                let hasMore = true;
+                
+                // Carregar todas as páginas
+                while (hasMore) {
+                    const data = await API.getBulls({ per_page: 500, page: page });
+                    
+                    if (data.bulls && data.bulls.length > 0) {
+                        allData = allData.concat(data.bulls);
+                        page++;
+                        
+                        // Verificar se há mais páginas
+                        if (data.bulls.length < 500 || (data.total_pages && page > data.total_pages)) {
+                            hasMore = false;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+                
+                allBulls = allData;
+                console.log(`Carregados ${allBulls.length} touros`);
+                
+                // Atualizar contador
+                document.getElementById('bull-count').textContent = `(${allBulls.length} disponíveis)`;
+                
                 renderBullsDropdown(allBulls);
+                updateDataStatus();
+                
+                return allBulls;
             } catch (error) {
                 console.error('Erro ao carregar touros:', error);
+                document.getElementById('bull-count').textContent = '(erro ao carregar)';
+                return [];
             }
+        }
+
+        // ============================================================
+        // CORREÇÃO: Carregar TODAS as fêmeas (sem limite)
+        // ============================================================
+        async function loadAllFemales() {
+            try {
+                let allData = [];
+                let page = 1;
+                let hasMore = true;
+                
+                // Carregar todas as páginas
+                while (hasMore) {
+                    const data = await API.getFemales({ per_page: 500, page: page });
+                    
+                    if (data.females && data.females.length > 0) {
+                        allData = allData.concat(data.females);
+                        page++;
+                        
+                        // Verificar se há mais páginas
+                        if (data.females.length < 500 || (data.total_pages && page > data.total_pages)) {
+                            hasMore = false;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+                
+                allFemales = allData;
+                console.log(`Carregadas ${allFemales.length} fêmeas`);
+                
+                // Atualizar contador
+                document.getElementById('female-count').textContent = `(${allFemales.length} disponíveis)`;
+                
+                updateDataStatus();
+                
+                return allFemales;
+            } catch (error) {
+                console.error('Erro ao carregar fêmeas:', error);
+                document.getElementById('female-count').textContent = '(erro ao carregar)';
+                return [];
+            }
+        }
+
+        function updateDataStatus() {
+            const status = document.getElementById('data-status');
+            status.innerHTML = `
+                <i class="ph ph-check-circle" style="color: var(--success);"></i>
+                ${allBulls.length} touros | ${allFemales.length} fêmeas carregadas
+            `;
         }
 
         function renderBullsDropdown(bulls) {
             const dropdown = document.getElementById('bull-dropdown');
+            
+            if (bulls.length === 0) {
+                dropdown.innerHTML = '<div style="padding: 1rem; color: var(--text-tertiary);">Nenhum touro encontrado</div>';
+                return;
+            }
+            
             dropdown.innerHTML = bulls.map(bull => `
-                <div class="dropdown-item" data-bull-id="${bull.id}"
+                <div class="dropdown-item ${selectedBulls.find(b => b.id === bull.id) ? 'selected' : ''}" 
+                     data-bull-id="${bull.id}"
                      onclick="toggleBull(this, ${bull.id}, '${bull.code}')">
                     <div class="custom-checkbox">
                         <i class="ph-bold ph-check" style="font-size: 12px;"></i>
                     </div>
-                    <div>
+                    <div style="flex: 1;">
                         <strong>${bull.code}</strong>
                         <span style="font-size: 0.8rem; color: gray;">${bull.name || ''}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-tertiary);">
+                        NM$ ${bull.net_merit || '-'}
                     </div>
                 </div>
             `).join('');
@@ -160,22 +263,73 @@
                 (b.name && b.name.toLowerCase().includes(query))
             );
             renderBullsDropdown(filtered);
+            
+            // Abrir dropdown se houver busca
+            if (query.length > 0) {
+                document.getElementById('bull-dropdown').classList.add('open');
+            }
         }
 
-        async function searchFemale() {
-            const query = document.getElementById('female-search').value;
-            if (!query) return;
+        // ============================================================
+        // CORREÇÃO: Busca de fêmeas no array local (não na API)
+        // ============================================================
+        function searchFemales() {
+            const query = document.getElementById('female-search').value.toLowerCase();
+            
+            if (!query) {
+                document.getElementById('female-dropdown').style.display = 'none';
+                return;
+            }
+            
+            // Filtrar no array local (TODOS os dados já carregados)
+            const filtered = allFemales.filter(f =>
+                (f.reg_id && f.reg_id.toLowerCase().includes(query)) ||
+                (f.internal_id && f.internal_id.toLowerCase().includes(query)) ||
+                (f.name && f.name.toLowerCase().includes(query))
+            );
+            
+            renderFemalesDropdown(filtered);
+            document.getElementById('female-dropdown').style.display = 'block';
+        }
 
-            try {
-                const data = await API.getFemales({ search: query, per_page: 1 });
-                if (data.females.length > 0) {
-                    selectedFemale = data.females[0];
-                    displayFemaleResult();
-                } else {
-                    alert('Fêmea não encontrada');
-                }
-            } catch (error) {
-                alert('Erro ao buscar fêmea');
+        function renderFemalesDropdown(females) {
+            const dropdown = document.getElementById('female-dropdown');
+            
+            if (females.length === 0) {
+                dropdown.innerHTML = '<div style="padding: 1rem; color: var(--text-tertiary);">Nenhuma fêmea encontrada</div>';
+                return;
+            }
+            
+            // Limitar a 50 para não travar a UI
+            const displayFemales = females.slice(0, 50);
+            
+            dropdown.innerHTML = displayFemales.map(f => `
+                <div class="dropdown-item" onclick="selectFemale(${f.id})">
+                    <div style="flex: 1;">
+                        <strong>${f.reg_id || f.internal_id}</strong>
+                        <span style="font-size: 0.8rem; color: gray;">${f.name || 'Sem nome'}</span>
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-tertiary);">
+                        Milk: ${f.milk || '-'}
+                    </div>
+                </div>
+            `).join('');
+            
+            if (females.length > 50) {
+                dropdown.innerHTML += `
+                    <div style="padding: 0.5rem; text-align: center; color: var(--text-tertiary); font-size: 0.8rem;">
+                        ... e mais ${females.length - 50} resultados. Refine a busca.
+                    </div>
+                `;
+            }
+        }
+
+        function selectFemale(id) {
+            selectedFemale = allFemales.find(f => f.id === id);
+            if (selectedFemale) {
+                displayFemaleResult();
+                document.getElementById('female-dropdown').style.display = 'none';
+                document.getElementById('female-search').value = '';
             }
         }
 
@@ -188,13 +342,22 @@
                 <div style="background: white; width: 48px; height: 48px; border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center;">
                     <i class="ph ph-cow" style="font-size: 1.5rem;"></i>
                 </div>
-                <div>
+                <div style="flex: 1;">
                     <strong style="display: block; color: var(--text-main);">Vaca ${selectedFemale.reg_id || selectedFemale.internal_id}</strong>
                     <span style="font-size: 0.8rem; color: var(--text-secondary);">
                         ${selectedFemale.name || 'Sem nome'}
                     </span>
                 </div>
+                <button class="btn btn-secondary" onclick="clearFemale()" style="padding: 0.25rem 0.5rem;">
+                    <i class="ph ph-x"></i>
+                </button>
             `;
+            checkCanAnalyze();
+        }
+
+        function clearFemale() {
+            selectedFemale = null;
+            document.getElementById('female-result').style.display = 'none';
             checkCanAnalyze();
         }
 
@@ -294,43 +457,192 @@
             const comp = data.analysis.compatibility;
             const inb = data.analysis.inbreeding;
             const pppv = data.analysis.pppv;
+            const recommendation = data.recommendation;
 
-            const gradeClass = comp.grade === 'A' ? 'grade-a' : 'grade-b';
-            const inbColor = inb.expected_inbreeding < 6 ? 'success' : 'warning';
+            // Determinar classe do card baseado no grade
+            let gradeClass = 'grade-c';
+            let gradeColor = 'warning';
+            if (comp.score >= 75) {
+                gradeClass = 'grade-a';
+                gradeColor = 'success';
+            } else if (comp.score >= 55) {
+                gradeClass = 'grade-b';
+                gradeColor = 'primary';
+            }
+
+            // Cor da consanguinidade
+            let inbColor = 'success';
+            let inbIcon = 'check-circle';
+            if (inb.expected_inbreeding > 8) {
+                inbColor = 'danger';
+                inbIcon = 'x-circle';
+            } else if (inb.expected_inbreeding > 6.25) {
+                inbColor = 'warning';
+                inbIcon = 'warning';
+            }
+
+            // Helper para formatar valores
+            const formatValue = (val, decimals = 0) => {
+                if (val === null || val === undefined) return '-';
+                const num = parseFloat(val);
+                if (isNaN(num)) return '-';
+                const sign = num >= 0 ? '+' : '';
+                return sign + num.toFixed(decimals);
+            };
+
+            // Organizar PPPV por categoria
+            const categories = {
+                production: {
+                    title: 'Produção',
+                    indices: [
+                        { key: 'milk', label: 'Leite (lbs)', decimals: 0 },
+                        { key: 'protein', label: 'Proteína (lbs)', decimals: 0 },
+                        { key: 'fat', label: 'Gordura (lbs)', decimals: 0 },
+                    ]
+                },
+                health: {
+                    title: 'Saúde & Longevidade',
+                    indices: [
+                        { key: 'productive_life', label: 'Vida Produtiva', decimals: 1 },
+                        { key: 'scs', label: 'CCS (menor=melhor)', decimals: 2, inverse: true },
+                    ]
+                },
+                fertility: {
+                    title: 'Fertilidade',
+                    indices: [
+                        { key: 'fertility_index', label: 'Índice Fertilidade', decimals: 2 },
+                        { key: 'dpr', label: 'DPR', decimals: 2 },
+                    ]
+                },
+                type: {
+                    title: 'Tipo & Conformação',
+                    indices: [
+                        { key: 'udc', label: 'Úbere (UDC)', decimals: 2 },
+                        { key: 'flc', label: 'Pés & Pernas (FLC)', decimals: 2 },
+                    ]
+                },
+                economic: {
+                    title: 'Mérito Econômico',
+                    indices: [
+                        { key: 'net_merit', label: 'Net Merit $', decimals: 0 },
+                    ]
+                }
+            };
+
+            // Gerar HTML das categorias
+            let categoriesHTML = '';
+            
+            for (const [catKey, cat] of Object.entries(categories)) {
+                let indicesHTML = '';
+                let hasData = false;
+                
+                for (const idx of cat.indices) {
+                    const pppvData = pppv[idx.key];
+                    if (pppvData && pppvData.pppv !== undefined) {
+                        hasData = true;
+                        const value = formatValue(pppvData.pppv, idx.decimals);
+                        const valueColor = idx.inverse 
+                            ? (pppvData.pppv < 0 ? 'success' : pppvData.pppv > 0 ? 'danger' : 'secondary')
+                            : (pppvData.pppv > 0 ? 'success' : pppvData.pppv < 0 ? 'danger' : 'secondary');
+                        
+                        indicesHTML += `
+                            <div style="display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px dashed var(--border);">
+                                <span style="color: var(--text-secondary); font-size: 0.85rem;">${idx.label}</span>
+                                <strong style="color: var(--${valueColor}); font-family: var(--font-mono);">${value}</strong>
+                            </div>
+                        `;
+                    }
+                }
+                
+                if (hasData) {
+                    categoriesHTML += `
+                        <div class="pppv-category" style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; color: var(--text-main);">
+                                ${cat.title}
+                            </div>
+                            ${indicesHTML}
+                        </div>
+                    `;
+                }
+            }
+
+            // Alertas de haplótipos
+            let haplotypeWarning = '';
+            if (inb.haplotype_risks && inb.haplotype_risks.length > 0) {
+                const criticalRisks = inb.haplotype_risks.filter(r => r.severity === 'critical');
+                
+                if (criticalRisks.length > 0) {
+                    const haps = criticalRisks.map(r => r.haplotype).join(', ');
+                    haplotypeWarning = `
+                        <div style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(220, 38, 38, 0.1); 
+                                    border-left: 3px solid var(--danger); border-radius: var(--radius); 
+                                    color: var(--danger); font-size: 0.85rem;">
+                            <i class="ph-fill ph-warning"></i>
+                            <strong>ALERTA:</strong> Risco letal de ${haps}
+                        </div>
+                    `;
+                }
+            }
 
             return `
-                <div class="result-card ${gradeClass}">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                        <strong>Touro: ${bull.code}</strong>
-                        <span style="background: var(--${gradeClass === 'grade-a' ? 'success' : 'primary'}-bg);
-                                     color: var(--${gradeClass === 'grade-a' ? 'success' : 'primary'});
-                                     padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">
-                            ${comp.grade} - ${comp.grade === 'A' ? 'EXCELENTE' : 'BOM'}
+                <div class="result-card ${gradeClass}" style="min-width: 320px; max-width: 400px;">
+                    <!-- Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; 
+                                padding-bottom: 0.75rem; border-bottom: 2px solid var(--border);">
+                        <div>
+                            <strong style="font-size: 1.1rem; color: var(--text-main);">🐂 ${bull.code}</strong>
+                            ${bull.name ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">${bull.name}</div>` : ''}
+                        </div>
+                        <span style="background: var(--${gradeColor}-bg); color: var(--${gradeColor});
+                                     padding: 6px 14px; border-radius: 9999px; font-weight: 700; font-size: 0.8rem;
+                                     font-family: var(--font-mono); letter-spacing: 0.5px;">
+                            ${comp.grade}
                         </span>
                     </div>
 
-                    <div style="font-family: var(--font-serif); font-size: 3rem; font-weight: 700; line-height: 1; margin: 0.5rem 0;">
-                        ${comp.score.toFixed(1)}
-                    </div>
-                    <div style="color: var(--text-tertiary); font-size: 0.9rem; margin-bottom: 1rem;">Índice Genefy</div>
-
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px dashed var(--border);">
-                        <span>Leite</span>
-                        <strong>+${pppv.milk?.pppv || 0}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px dashed var(--border);">
-                        <span>Proteína</span>
-                        <strong>+${pppv.protein?.pppv || 0}</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                        <span>UDC</span>
-                        <strong>+${pppv.udc?.pppv || 0}</strong>
+                    <!-- Score Principal -->
+                    <div style="text-align: center; margin-bottom: 1.5rem;">
+                        <div style="font-family: var(--font-serif); font-size: 4rem; font-weight: 700; line-height: 1; 
+                                    color: var(--text-main); letter-spacing: -2px;">
+                            ${comp.score.toFixed(1)}
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+                            Índice Genefy (IEP)
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-tertiary); margin-top: 0.25rem;">
+                            Confiabilidade: <strong>${comp.reliability?.toFixed(0) || 60}%</strong>
+                        </div>
                     </div>
 
-                    <div style="margin-top: 1rem; padding: 0.5rem; border-radius: 4px; font-size: 0.8rem;
-                                background: var(--${inbColor}-bg); color: var(--${inbColor});">
-                        <i class="ph-fill ph-${inbColor === 'success' ? 'check-circle' : 'warning'}"></i>
-                        Consang: ${inb.expected_inbreeding.toFixed(2)}% (${inbColor === 'success' ? 'Ideal' : 'Atenção'})
+                    <!-- Consanguinidade -->
+                    <div style="margin-bottom: 1.25rem; padding: 0.75rem; border-radius: var(--radius);
+                                background: var(--${inbColor}-bg); color: var(--${inbColor});
+                                display: flex; flex-direction: column; gap: 0.25rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600;">
+                            <i class="ph-fill ph-${inbIcon}"></i>
+                            <span>Consanguinidade: ${inb.expected_inbreeding.toFixed(2)}%</span>
+                            <span style="font-weight: 400;">(${inb.risk_level})</span>
+                        </div>
+                    </div>
+
+                    ${haplotypeWarning}
+
+                    <!-- PPPV por Categoria -->
+                    <details style="margin-top: 1rem;" open>
+                        <summary style="cursor: pointer; font-weight: 600; color: var(--text-main); 
+                                       padding: 0.5rem 0; user-select: none;">
+                            PPPV da Progênie
+                        </summary>
+                        <div style="padding: 0.75rem 0; max-height: 400px; overflow-y: auto;">
+                            ${categoriesHTML || '<div style="color: var(--text-tertiary);">Dados não disponíveis</div>'}
+                        </div>
+                    </details>
+
+                    <!-- Recomendação -->
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: var(--bg-subtle); 
+                                border-radius: var(--radius); font-size: 0.9rem; color: var(--text-secondary);
+                                border-left: 3px solid var(--${recommendation.color || gradeColor});">
+                        ${recommendation.message}
                     </div>
                 </div>
             `;
@@ -341,11 +653,65 @@
             if (!event.target.closest('.multi-select-container')) {
                 document.getElementById('bull-dropdown').classList.remove('open');
             }
+            if (!event.target.closest('.step-card')) {
+                document.getElementById('female-dropdown').style.display = 'none';
+            }
         }
 
-        // Carregar touros ao iniciar
-        loadBulls();
+        // ============================================================
+        // INICIALIZAÇÃO: Carregar TODOS os dados ao abrir a página
+        // ============================================================
+        async function init() {
+            console.log('🔄 Carregando todos os dados...');
+            
+            // Carregar em paralelo
+            await Promise.all([
+                loadAllBulls(),
+                loadAllFemales()
+            ]);
+            
+            console.log('✅ Dados carregados!');
+            console.log(`   Touros: ${allBulls.length}`);
+            console.log(`   Fêmeas: ${allFemales.length}`);
+        }
+
+        // Iniciar carregamento
+        init();
     </script>
+
+    <style>
+        /* CSS adicional para melhor visualização */
+        .pppv-category {
+            background: var(--bg-subtle);
+            padding: 0.75rem;
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+        }
+
+        .result-card details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .result-card details summary::before {
+            content: '▶ ';
+            font-size: 0.7rem;
+        }
+
+        .result-card details[open] summary::before {
+            content: '▼ ';
+        }
+
+        #female-dropdown .dropdown-item:hover,
+        #bull-dropdown .dropdown-item:hover {
+            background: var(--bg-subtle);
+        }
+
+        #data-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+    </style>
 </body>
 
 </html>
