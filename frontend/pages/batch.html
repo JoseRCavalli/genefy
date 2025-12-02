@@ -53,7 +53,6 @@
         }
 
         @media print {
-
             .batch-summary,
             .btn,
             button {
@@ -156,9 +155,7 @@
     </footer>
 
     <script src="/js/api.js"></script>
-    <script src="/js/api.js"></script>
     <script src="/js/logout.js"></script>
-    <!-- <script src="/js/auth.js"></script> -->
     <script>
         let selectedFemales = new Set();
         let allFemales = [];
@@ -219,210 +216,12 @@
 
             let html = '<div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1rem;">';
 
-            // Botão Anterior
             if (currentPage > 1) {
                 html += `<button class="btn btn-secondary" onclick="changePage(${currentPage - 1})">← Anterior</button>`;
             }
 
-            // Páginas
             html += `<span style="padding: 0 1rem;">Página ${currentPage} de ${totalPages}</span>`;
 
-            // Botão Próxima
-            if (currentPage < totalPages) {
-                html += `<button class="btn btn-secondary" onclick="changePage(${currentPage + 1})">Próxima →</button>`;
-            }
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        function changePage(page) {
-            currentPage = page;
-            loadFemales(page);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function updateSelected() {
-            document.querySelectorAll('.female-checkbox:checked').forEach(cb => {
-                selectedFemales.add(parseInt(cb.value));
-            });
-
-            document.querySelectorAll('.female-checkbox:not(:checked)').forEach(cb => {
-                selectedFemales.delete(parseInt(cb.value));
-            });
-
-            document.getElementById('selected-count').textContent =
-                `${selectedFemales.size} fêmeas selecionadas`;
-            document.getElementById('analyze-btn').disabled = selectedFemales.size === 0;
-        }
-
-        document.getElementById('select-all').addEventListener('change', (e) => {
-            document.querySelectorAll('.female-checkbox').forEach(cb => {
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-brand" onclick="window.location='/dashboard'">
-                <div class="brand-icon-box">
-                    <img src="https://img.icons8.com/ios-filled/50/ffffff/cow.png" alt="Cow"
-                        style="width: 24px; height: 24px;">
-                </div>
-                <span class="brand-text">Genefy<span>.</span></span>
-            </div>
-            <ul class="nav-menu">
-                <li><a href="/dashboard">Dashboard</a></li>
-                <li><a href="/herd">Rebanho</a></li>
-                <li><a href="/manual">Manual</a></li>
-                <li><a href="/batch" class="active">Lote</a></li>
-                <li><a href="/history">Histórico</a></li>
-                <li><a href="/analytics">Análises</a></li>
-                <li><a href="/import">Dados</a></li>
-                <li><a href="#" onclick="logout(event)" style="color: #dc2626;">Sair</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <main class="container">
-        <header class="page-header">
-            <div>
-                <h1>Acasalamento em Lote</h1>
-                <p>:: Otimização para Múltiplas Fêmeas</p>
-            </div>
-        </header>
-
-        <section class="section">
-            <h2>1. Selecionar Fêmeas</h2>
-            <div class="form-group">
-                <input type="text" id="search" class="form-control" placeholder="Buscar fêmeas...">
-            </div>
-            <div style="max-height: 400px; overflow-y: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox" id="select-all"></th>
-                            <th>ID</th>
-                            <th>Nome</th>
-                            <th>MILK</th>
-                        </tr>
-                    </thead>
-                    <tbody id="females-table">
-                        <tr>
-                            <td colspan="4" class="loading">Carregando...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="pagination-controls"></div>
-            <p id="selected-count" style="margin-top: 1rem;">0 fêmeas selecionadas</p>
-        </section>
-
-        <section class="section">
-            <h2>2. Configurações</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                <div class="form-group">
-                    <label class="form-label">Top N Touros por Fêmea</label>
-                    <input type="number" id="top-n" class="form-control" value="5" min="1" max="10">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Consanguinidade Máxima (%)</label>
-                    <input type="number" id="max-inb" class="form-control" value="6.0" min="0" max="10" step="0.1">
-                </div>
-            </div>
-            <button id="analyze-btn" class="btn btn-primary btn-lg" style="width: 100%; margin-top: 1rem;" disabled>
-                <i class="ph ph-rocket-launch" style="font-size: 1rem; font-weight: bold;"></i>
-                Analisar Lote
-            </button>
-        </section>
-
-        <div id="results-section" style="display: none;">
-            <section class="section">
-                <h2>Resultados</h2>
-                <div id="results-container"></div>
-            </section>
-        </div>
-    </main>
-
-    <footer class="footer">
-        <p>Sistema de Acasalamento - Gado Leiteiro &copy; 2025</p>
-    </footer>
-
-    <script src="/js/api.js"></script>
-    <script src="/js/api.js"></script>
-    <script src="/js/logout.js"></script>
-    <!-- <script src="/js/auth.js"></script> -->
-    <script>
-        let selectedFemales = new Set();
-        let allFemales = [];
-        let currentPage = 1;
-        let totalPages = 1;
-
-        async function loadFemales(page = 1) {
-            try {
-                const search = document.getElementById('search').value;
-                const data = await API.getFemales({
-                    per_page: 50,
-                    page: page,
-                    search: search,
-                    active_only: true
-                });
-
-                allFemales = data.females;
-                currentPage = page;
-                totalPages = data.total_pages || 1;
-
-                renderFemales(allFemales);
-                renderPagination();
-            } catch (error) {
-                document.getElementById('females-table').innerHTML =
-                    '<tr><td colspan="4" class="empty-state">Erro ao carregar fêmeas</td></tr>';
-            }
-        }
-
-        function renderFemales(females) {
-            const tbody = document.getElementById('females-table');
-
-            if (females.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhuma fêmea encontrada</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = females.map(f => `
-                <tr>
-                    <td><input type="checkbox" class="female-checkbox" name="female_select" value="${f.id}" ${selectedFemales.has(f.id) ? 'checked' : ''}></td>
-                    <td>${f.reg_id || f.internal_id}</td>
-                    <td>${f.name || '-'}</td>
-                    <td>${f.milk || '-'}</td>
-                </tr>
-            `).join('');
-
-            document.querySelectorAll('.female-checkbox').forEach(cb => {
-                cb.addEventListener('change', updateSelected);
-            });
-        }
-
-        function renderPagination() {
-            const container = document.getElementById('pagination-controls');
-
-            if (totalPages <= 1) {
-                container.innerHTML = '';
-                return;
-            }
-
-            let html = '<div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1rem;">';
-
-            // Botão Anterior
-            if (currentPage > 1) {
-                html += `<button class="btn btn-secondary" onclick="changePage(${currentPage - 1})">← Anterior</button>`;
-            }
-
-            // Páginas
-            html += `<span style="padding: 0 1rem;">Página ${currentPage} de ${totalPages}</span>`;
-
-            // Botão Próxima
             if (currentPage < totalPages) {
                 html += `<button class="btn btn-secondary" onclick="changePage(${currentPage + 1})">Próxima →</button>`;
             }
@@ -470,36 +269,31 @@
 
         // Configurações do lote
         const BATCH_CONFIG = {
-            topN: 3,                    // Top N touros por fêmea
-            maxInbreeding: 8.0,         // Limite de consanguinidade
-            maxFemalesPerBatch: 100,    // Máximo de fêmeas por lote
+            topN: 3,
+            maxInbreeding: 8.0,
+            maxFemalesPerBatch: 100,
         };
 
         document.getElementById('analyze-btn').addEventListener('click', processBatch);
 
-        /**
-         * Processa o lote e exibe resultados
-         */
         async function processBatch() {
-            // Update config from UI inputs if present
             const topNInput = document.getElementById('top-n');
             const maxInbInput = document.getElementById('max-inb');
             if (topNInput) BATCH_CONFIG.topN = parseInt(topNInput.value);
             if (maxInbInput) BATCH_CONFIG.maxInbreeding = parseFloat(maxInbInput.value);
 
-            const selectedFemales = getSelectedFemales();
+            const selectedFemalesList = getSelectedFemales();
             
-            if (selectedFemales.length === 0) {
+            if (selectedFemalesList.length === 0) {
                 showToast('Selecione pelo menos uma fêmea', 'warning');
                 return;
             }
             
-            if (selectedFemales.length > BATCH_CONFIG.maxFemalesPerBatch) {
+            if (selectedFemalesList.length > BATCH_CONFIG.maxFemalesPerBatch) {
                 showToast(`Máximo de ${BATCH_CONFIG.maxFemalesPerBatch} fêmeas por lote`, 'warning');
                 return;
             }
             
-            // Mostrar loading
             const resultsSection = document.getElementById('results-section');
             const resultsContainer = document.getElementById('results-container');
             
@@ -508,7 +302,7 @@
                 <div style="text-align: center; padding: 3rem;">
                     <div class="spinner"></div>
                     <p style="margin-top: 1rem; color: var(--text-secondary);">
-                        Processando ${selectedFemales.length} fêmeas contra todos os touros disponíveis...
+                        Processando ${selectedFemalesList.length} fêmeas contra todos os touros disponíveis...
                     </p>
                     <p style="font-size: 0.85rem; color: var(--text-tertiary);">
                         Isso pode levar alguns segundos
@@ -521,7 +315,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        female_ids: selectedFemales,
+                        female_ids: selectedFemalesList,
                         top_n: BATCH_CONFIG.topN,
                         max_inbreeding: BATCH_CONFIG.maxInbreeding,
                         save: false
@@ -547,13 +341,9 @@
             }
         }
 
-        /**
-         * Exibe resultados do lote
-         */
         function displayBatchResults(result) {
             const container = document.getElementById('results-container');
             
-            // Estatísticas do lote
             const summary = result.summary || {};
             const totalFemales = summary.total_females || result.results?.length || 0;
             const totalBulls = summary.total_bulls_analyzed || 0;
@@ -561,7 +351,6 @@
             const avgInbreeding = summary.average_inbreeding || calculateAvgInbreeding(result.results);
             const uniqueBulls = summary.unique_bulls_recommended || countUniqueBulls(result.results);
             
-            // Header com estatísticas
             let html = `
                 <div class="batch-summary" style="
                     background: linear-gradient(135deg, var(--primary-bg), var(--bg-subtle));
@@ -594,7 +383,6 @@
                 </div>
             `;
             
-            // Resultados por fêmea
             html += `<div class="batch-results">`;
             
             for (const femaleResult of (result.results || [])) {
@@ -603,7 +391,6 @@
             
             html += `</div>`;
             
-            // Botões de ação
             html += `
                 <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-primary" onclick="exportBatchToExcel()">
@@ -619,14 +406,9 @@
             `;
             
             container.innerHTML = html;
-            
-            // Scroll suave para os resultados
             document.getElementById('results-section').scrollIntoView({ behavior: 'smooth' });
         }
 
-        /**
-         * Cria card de resultado para uma fêmea
-         */
         function createFemaleResultCard(femaleResult) {
             const female = femaleResult.female || {};
             const topBulls = femaleResult.top_bulls || [];
@@ -634,7 +416,6 @@
             const femaleId = female.internal_id || female.reg_id || female.id;
             const femaleName = female.name || '';
             
-            // Criar linhas da tabela para cada touro
             let bullsRows = '';
             
             for (const bull of topBulls) {
@@ -645,11 +426,8 @@
                 const inbreeding = bull.inbreeding?.expected_inbreeding || bull.inbreeding || 0;
                 const reliability = bull.reliability || 60;
                 
-                // Cores baseadas no score
                 const scoreColor = score >= 70 ? 'success' : score >= 55 ? 'primary' : 'warning';
                 const inbColor = inbreeding < 6.25 ? 'success' : inbreeding < 8 ? 'warning' : 'danger';
-                
-                // Ícone do rank
                 const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}º`;
                 
                 bullsRows += `
@@ -691,7 +469,6 @@
                 `;
             }
             
-            // Se não tem touros recomendados
             if (topBulls.length === 0) {
                 bullsRows = `
                     <tr>
@@ -711,7 +488,6 @@
                     margin-bottom: 1.5rem;
                     overflow: hidden;
                 ">
-                    <!-- Header da fêmea -->
                     <div style="
                         background: var(--bg-subtle);
                         padding: 1rem 1.25rem;
@@ -721,7 +497,7 @@
                         justify-content: space-between;
                     ">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <span style="font-size: 1.5rem;"></span>
+                            <span style="font-size: 1.5rem;">🐄</span>
                             <div>
                                 <strong style="font-size: 1.1rem; color: var(--text-main);">${femaleId}</strong>
                                 ${femaleName ? `<span style="color: var(--text-secondary); margin-left: 0.5rem;">- ${femaleName}</span>` : ''}
@@ -737,7 +513,6 @@
                         ">Top ${topBulls.length} touros</span>
                     </div>
                     
-                    <!-- Tabela de touros -->
                     <div style="overflow-x: auto;">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead>
@@ -760,9 +535,6 @@
             `;
         }
 
-        /**
-         * Helpers
-         */
         function getSelectedFemales() {
             const checkboxes = document.querySelectorAll('input[name="female_select"]:checked');
             return Array.from(checkboxes).map(cb => parseInt(cb.value));
@@ -817,37 +589,23 @@
         }
 
         function showBullDetails(femaleId, bullId) {
-            // Abre modal com detalhes completos do acasalamento
-            // Você pode implementar isso chamando o endpoint /api/matings/manual
             window.open(`/manual?female=${femaleId}&bull=${bullId}`, '_blank');
         }
 
         function showToast(message, type = 'info') {
-            // Implementar toast notification
             alert(message);
         }
 
-        /**
-         * Exportar para Excel
-         */
         async function exportBatchToExcel() {
             showToast('Gerando Excel...', 'info');
-            // TODO: Implementar exportação
         }
 
-        /**
-         * Imprimir resultados
-         */
         function printBatchResults() {
             window.print();
         }
 
-        /**
-         * Salvar no histórico
-         */
         async function saveBatchToHistory() {
             showToast('Salvando no histórico...', 'info');
-            // TODO: Implementar salvamento
         }
 
         // Carregar primeira página

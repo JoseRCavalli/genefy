@@ -15,7 +15,7 @@ from backend.services.importer import DataImporter
 from backend.services.matching import MatchingService
 from backend.services.analytics import AnalyticsService
 from backend.services.genetics import genetic_calculator
-from backend.services.genetics_complete import genetic_calculator_complete
+from backend.services.genetics import genetic_calculator_complete
 
 
 # Criar blueprints
